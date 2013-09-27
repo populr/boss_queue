@@ -27,10 +27,16 @@ class BossQueue
   end
 
 
-  def self.create_table
+  def self.create_table(read_capacity=1, write_capacity=1, options={})
+    create_opts = {}
+    create_opts[:hash_key] = { hash_key => :string }
+    create_opts[:range_key] = { :kind => :string }
+
+    AWS::DynamoDB.new.tables.create(self.table_name, read_capacity, write_capacity, create_opts)
   end
 
   def self.create_queue
+    AWS::SQS::QueueCollection.new.create(self.queue_name, :default_visibility_timeout => 5 * 60)
   end
 
   def self.work
