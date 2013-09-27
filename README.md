@@ -19,9 +19,7 @@ boss_queue uses an Amazon SQS queue and a Amazon DynamoDB table for each environ
     AWS.config(:access_key_id => <access_key_id>,
                :secret_access_key => <secret_access_key>)
 
-    queue = BossQueue.new # default queue name
-    # or
-    queue = BossQueue.new(:queue => 'emails') # customized queue name (so you can have separate job queues)
+    queue = BossQueue.new
 
     BossQueue.environment = 'development'
     queue.create_table
@@ -37,6 +35,13 @@ boss_queue uses an Amazon SQS queue and a Amazon DynamoDB table for each environ
 
     BossQueue.environment = 'production'
     queue.create_table(50, 10)
+    queue.create_queue
+
+    # you can also have customized queue names for separate job queues
+    # (only create the queue again...a single DynamoDB table serves all the queues)
+    queue = BossQueue.new(:queue => 'emails')
+    queue.create_queue
+    queue = BossQueue.new(:queue => 'image_processing')
     queue.create_queue
 
 
