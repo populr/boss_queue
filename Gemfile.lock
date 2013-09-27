@@ -83,7 +83,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  aws-sdk
+  aws-sdk (>= 1.19.0)
   bundler
   jeweler!
   pry

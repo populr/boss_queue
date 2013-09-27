@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'aws-sdk'
+gem 'aws-sdk', '>=1.19.0'
 
 group :development do
   gem 'rspec'
