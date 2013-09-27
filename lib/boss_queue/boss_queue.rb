@@ -36,7 +36,7 @@ class BossQueue
     # small message size because we are only sending id
     # 5 second delay so that we can use eventually consistent reads in DynamoDB
     AWS::SQS::QueueCollection.new.create(queue_name, :visibility_timeout => 180,
-                                                     :maximum_message_size => 128,
+                                                     :maximum_message_size => 1024,
                                                      :delay_seconds => 5,
                                                      :message_retention_period => 1209600)
   end
