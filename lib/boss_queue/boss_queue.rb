@@ -40,7 +40,7 @@ class BossQueue
   end
 
   def self.work
-    queue = AWS::SQS.new.queues[self.queue_name]
+    queue = AWS::SQS.new.queues[self.sqs_queue]
     queue.receive_message do |job_id|
       # When a block is given, each message is yielded to the block and then deleted as long as the block exits normally - http://docs.aws.amazon.com/AWSRubySDK/latest/frames.html
       job = BossQueue::Job.shard(table_name).find_by_id(job_id.body)
@@ -78,6 +78,10 @@ class BossQueue
     job.job_arguments = JSON.generate(args)
     job.save!
     job
+  end
+
+  def self.sqs_queue # :nodoc:
+    AWS::SQS.new.queues[AWS::SQS.new.queues.url_for(self.queue_name)]
   end
 
   def self.environment # :nodoc:

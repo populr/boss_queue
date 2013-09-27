@@ -208,6 +208,7 @@ describe "BossQueue module" do
   describe "#work" do
     before(:each) do
       @queue = double('queue')
+      AWS::SQS.stub_chain(:new, :queues, :url_for).and_return('queue_url')
       AWS::SQS.stub_chain(:new, :queues, :[]).and_return(@queue)
 
       @sqs_message = double('message')
