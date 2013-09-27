@@ -138,7 +138,7 @@ describe "BossQueue module" do
         BossQueue::Job.any_instance.should_not_receive(:model_id=)
         BossQueue::Job.any_instance.should_receive(:job_method=).with('test_class_method')
         BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
-        BossQueue::Job.any_instance.should_receive(:save)
+        BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue)
         BossQueue.enqueue(TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
@@ -155,7 +155,7 @@ describe "BossQueue module" do
         BossQueue::Job.any_instance.should_receive(:model_id=).with('xyz')
         BossQueue::Job.any_instance.should_receive(:job_method=).with('test_instance_method')
         BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
-        BossQueue::Job.any_instance.should_receive(:save)
+        BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue)
         BossQueue.enqueue(TestClass.new, :test_instance_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
@@ -180,7 +180,7 @@ describe "BossQueue module" do
         BossQueue::Job.any_instance.should_not_receive(:model_id=)
         BossQueue::Job.any_instance.should_receive(:job_method=).with('test_class_method')
         BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
-        BossQueue::Job.any_instance.should_receive(:save)
+        BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue_with_delay).with(60)
         BossQueue.enqueue_with_delay(60, TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
@@ -197,7 +197,7 @@ describe "BossQueue module" do
         BossQueue::Job.any_instance.should_receive(:model_id=).with('xyz')
         BossQueue::Job.any_instance.should_receive(:job_method=).with('test_instance_method')
         BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
-        BossQueue::Job.any_instance.should_receive(:save)
+        BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue_with_delay).with(60)
         BossQueue.enqueue_with_delay(60, TestClass.new, :test_instance_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
@@ -216,7 +216,8 @@ describe "BossQueue module" do
 
       @job = double('job')
       @job.stub(:work)
-      BossQueue::Job.stub(:find_by_id).and_return(@job)
+      @job.stub(:queue_name=)
+      BossQueue::Job.stub_chain(:shard, :find_by_id).and_return(@job)
     end
 
     it "should dequeue from SQS" do
@@ -227,7 +228,9 @@ describe "BossQueue module" do
     context "when something is dequeued from SQS" do
       it "should use the dequeued id to retrieve a BossQueue::Job object" do
         @queue.should_receive(:receive_message).and_yield(@sqs_message)
-        BossQueue::Job.should_receive(:find_by_id).with('ijk').and_return(@job)
+        shard = double('shard')
+        BossQueue::Job.should_receive(:shard).with(BossQueue.table_name).and_return(shard)
+        shard.should_receive(:find_by_id).with('ijk').and_return(@job)
         BossQueue.work
       end
 

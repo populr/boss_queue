@@ -3,22 +3,21 @@ require 'json'
 class BossQueue
 
   class Job < AWS::Record::HashModel
-    attr_accessor :table_name
+    attr_accessor :queue_name
 
     string_attr :kind # an index based model_class_name, job_method
     boolean_attr :failed
 
-    string_attr :queue_name
-    string_attr :queue_message_id
+    string_attr :model_class_name
+    string_attr :model_id
+    string_attr :job_method
+    string_attr :job_arguments
+
     integer_attr :failed_attempts
     string_attr :failure_action
     string_attr :exception_name
     string_attr :exception_message
     string_attr :stacktrace
-    string_attr :model_class_name
-    string_attr :model_id
-    string_attr :job_method
-    string_attr :job_arguments
 
     timestamps
 
@@ -49,6 +48,24 @@ class BossQueue
     end
 
     def fail(err)
+      self.failed_attempts ||= 0
+      self.failed_attempts += 1
+      self.exception_name = err.class.to_s
+      self.exception_message = err.message
+      self.stacktrace = err.backtrace[0, 7].join("\n")
+
+      if failure_action == 'retry' && retry_delay
+        enqueue_with_delay(retry_delay)
+      else
+        self.failed = true
+      end
+
+      self.save!
+    end
+
+    def retry_delay
+      return nil if failed_attempts.nil? || failed_attempts > 4
+      60 * 2**(failed_attempts - 1)
     end
 
     # from ActiveSupport source: http://api.rubyonrails.org/classes/ActiveSupport/Inflector.html#method-i-constantize
