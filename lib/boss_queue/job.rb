@@ -22,13 +22,11 @@ class BossQueue
     timestamps
 
     def enqueue
-      queue = AWS::SQS.new.queues[queue_name]
-      queue.send_message(id.to_s)
+      sqs_queue.send_message(id.to_s)
     end
 
     def enqueue_with_delay(delay)
-      queue = AWS::SQS.new.queues[queue_name]
-      queue.send_message(id.to_s, :delay_seconds => [900, [0, delay].max].min)
+      sqs_queue.send_message(id.to_s, :delay_seconds => [900, [0, delay].max].min)
     end
 
     def work
@@ -68,8 +66,14 @@ class BossQueue
       60 * 2**(failed_attempts - 1)
     end
 
+    private
+
+    def sqs_queue
+      AWS::SQS.new.queues[AWS::SQS.new.queues.url_for(queue_name)]
+    end
+
     # from ActiveSupport source: http://api.rubyonrails.org/classes/ActiveSupport/Inflector.html#method-i-constantize
-    def constantize(camel_cased_word) # :nodoc:
+    def constantize(camel_cased_word)
       names = camel_cased_word.split('::')
       names.shift if names.empty? || names.first.empty?
 
