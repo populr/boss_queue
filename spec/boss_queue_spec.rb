@@ -167,18 +167,6 @@ describe "BossQueue module" do
     before(:each) do
       @arguments = ['a', 'b', { 'c' => 2, 'd' => 1 }]
       @argument_json = JSON.generate(@arguments)
-
-      class TestClass
-        def id
-          'xyz'
-        end
-
-        def self.test_class_method
-        end
-
-        def test_instance_method
-        end
-      end
     end
 
     context "when a class" do

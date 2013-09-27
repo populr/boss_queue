@@ -129,40 +129,100 @@ describe "BossQueue::Job" do
 
 
   describe "#work" do
+    before(:each) do
+      @job = BossQueue::Job.new
+      @job.stub(:destroy)
+      @job.model_class_name = 'TestClass'
+      @job.model_id = 'xyz'
+      @job.job_method = 'test_instance_method'
+      @arguments = ['a', 'b', { 'c' => 2, 'd' => 1 }]
+      @argument_json = JSON.generate(@arguments)
+      @job.job_arguments = @argument_json
+      @instance_to_work_on = double('instance_to_work_on')
+      @instance_to_work_on.stub(:test_instance_method)
+      TestClass.stub(:find).and_return(@instance_to_work_on)
+    end
+
+
     context "when model_id is not nil" do
       it "should use #find on the model class to instantiate an object to work on" do
-        pending
+        TestClass.should_receive(:find).with('xyz').and_return(@instance_to_work_on)
+        @job.work
       end
 
       it "should pass the job arguments to the job method" do
-        pending
+        @instance_to_work_on.should_receive(:test_instance_method).with('a', 'b', { 'c' => 2, 'd' => 1 })
+        @job.work
       end
     end
 
     context "when model_id is nil" do
-      it "should call the job method on the class" do
-        pending
+      before(:each) do
+        @job = BossQueue::Job.new
+        @job.stub(:destroy)
+        @job.model_class_name = 'TestClass'
+        @job.job_method = 'test_class_method'
+        @arguments = ['a', 'b', { 'c' => 2, 'd' => 1 }]
+        @argument_json = JSON.generate(@arguments)
+        @job.job_arguments = @argument_json
       end
 
-      it "should pass the job arguments to the job method" do
-        pending
+      it "should pass the job arguments to the job method on the class" do
+        TestClass.should_receive(:test_class_method).with('a', 'b', { 'c' => 2, 'd' => 1 })
+        @job.work
+      end
+    end
+
+    context "when the job method doesn't raise an exception" do
+      it "should call destroy" do
+        @job.should_receive(:destroy)
+        @job.work
       end
     end
 
     context "when the job method raises an exception" do
+      before(:each) do
+        @instance_to_work_on.stub(:test_instance_method).and_raise(StandardError.new)
+      end
 
-    end
-  end
+      it "should call fail" do
+        @job.should_receive(:fail)
+        @job.work
+      end
 
-  describe "#succeed" do
-    it "should call delete" do
-      pending
+      it "should not call destroy" do
+        @job.should_not_receive(:destroy)
+        @job.work
+      end
+
+      it "should not raise an exception" do
+        lambda {
+          @job.work
+        }.should_not raise_error
+      end
     end
+
   end
 
   describe "#enqueue" do
     it "should enqueue id into the SQS queue" do
-      pending
+      queue = double('queue')
+      AWS::SQS.stub_chain(:new, :queues, :[]).and_return(queue)
+      queue.should_receive(:send_message).with('ijk')
+      job = BossQueue::Job.new
+      job.id = 'ijk'
+      job.enqueue
+    end
+  end
+
+  describe "#enqueue_with_delay" do
+    it "should enqueue id into the SQS queue with a delay" do
+      queue = double('queue')
+      AWS::SQS.stub_chain(:new, :queues, :[]).and_return(queue)
+      queue.should_receive(:send_message).with('ijk', :delay_seconds => 60)
+      job = BossQueue::Job.new
+      job.id = 'ijk'
+      job.enqueue_with_delay(60)
     end
   end
 
@@ -189,18 +249,6 @@ describe "BossQueue::Job" do
       it "should call delete_message" do
         pending
       end
-    end
-  end
-
-  describe "#delete_message" do
-    it "should" do
-      pending
-    end
-  end
-
-  describe "#delete" do
-    it "should call #delete_message" do
-      pending
     end
   end
 

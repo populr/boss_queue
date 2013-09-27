@@ -15,4 +15,17 @@ Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
 
 RSpec.configure do |config|
 
+
+  class TestClass
+    def id
+      'xyz'
+    end
+
+    def self.test_class_method
+    end
+
+    def test_instance_method
+    end
+  end
+
 end
