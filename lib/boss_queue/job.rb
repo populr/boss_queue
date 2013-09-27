@@ -66,10 +66,14 @@ class BossQueue
       60 * 2**(failed_attempts - 1)
     end
 
+    def sqs_queue=(queue_obj) # :nodoc:
+      @sqs_queue = queue_obj
+    end
+
     private
 
     def sqs_queue
-      AWS::SQS.new.queues[AWS::SQS.new.queues.url_for(queue_name)]
+      @sqs_queue ||= AWS::SQS.new.queues[AWS::SQS.new.queues.url_for(queue_name)]
     end
 
     # from ActiveSupport source: http://api.rubyonrails.org/classes/ActiveSupport/Inflector.html#method-i-constantize

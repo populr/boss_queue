@@ -1,6 +1,19 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 
 describe "BossQueue module" do
+  before(:each) do
+    BossQueue.environment = 'test'
+
+    BossQueue::Job.any_instance.stub(:kind=)
+    BossQueue::Job.any_instance.stub(:queue_name=)
+    BossQueue::Job.any_instance.stub(:failure_action=)
+    BossQueue::Job.any_instance.stub(:model_class_name=)
+    BossQueue::Job.any_instance.stub(:model_id=)
+    BossQueue::Job.any_instance.stub(:job_method=)
+    BossQueue::Job.any_instance.stub(:job_arguments=)
+    BossQueue::Job.any_instance.stub(:save!)
+    BossQueue::Job.any_instance.stub(:enqueue)
+  end
 
   it "should respond to environment" do
     BossQueue.should respond_to(:environment)
@@ -10,17 +23,13 @@ describe "BossQueue module" do
     BossQueue.should respond_to(:environment=)
   end
 
-  it "should respond to failure_action" do
-    BossQueue.should respond_to(:failure_action)
-  end
-
-  it "should respond to failure_action=" do
-    BossQueue.should respond_to(:failure_action=)
-  end
-
   describe "#failure_action" do
     it "should default to 'retry'" do
-      BossQueue.failure_action.should == 'retry'
+      BossQueue.new.failure_action.should == 'retry'
+    end
+
+    it "should be overridable by a :failure_action option on initialize" do
+      BossQueue.new(:failure_action => 'none').failure_action.should == 'none'
     end
   end
 
@@ -32,35 +41,35 @@ describe "BossQueue module" do
     context "when @@environment is 'development'" do
       it "should be 'dev_boss_queue_jobs'" do
         BossQueue.environment = 'development'
-        BossQueue.table_name.should == 'dev_boss_queue_jobs'
+        BossQueue.new.table_name.should == 'dev_boss_queue_jobs'
       end
     end
 
     context "when @@environment is 'production'" do
       it "should be 'boss_queue_jobs'" do
         BossQueue.environment = 'production'
-        BossQueue.table_name.should == 'boss_queue_jobs'
+        BossQueue.new.table_name.should == 'boss_queue_jobs'
       end
     end
 
     context "when @@environment is 'staging'" do
       it "should be 'staging_boss_queue_jobs'" do
         BossQueue.environment = 'staging'
-        BossQueue.table_name.should == 'staging_boss_queue_jobs'
+        BossQueue.new.table_name.should == 'staging_boss_queue_jobs'
       end
     end
 
     context "when @@environment is 'staging'" do
       it "should be 'staging_boss_queue_jobs'" do
         BossQueue.environment = 'staging'
-        BossQueue.table_name.should == 'staging_boss_queue_jobs'
+        BossQueue.new.table_name.should == 'staging_boss_queue_jobs'
       end
     end
 
     context "when @@environment is nil" do
       it "should raise an exception" do
         lambda {
-          BossQueue.table_name
+          BossQueue.new.table_name
         }.should raise_error
       end
     end
@@ -75,36 +84,43 @@ describe "BossQueue module" do
     context "when @@environment is 'development'" do
       it "should be 'dev_boss_queue'" do
         BossQueue.environment = 'development'
-        BossQueue.queue_name.should == 'dev_boss_queue'
+        BossQueue.new.queue_name.should == 'dev_boss_queue'
       end
     end
 
     context "when @@environment is 'production'" do
       it "should be 'boss_queue'" do
         BossQueue.environment = 'production'
-        BossQueue.queue_name.should == 'boss_queue'
+        BossQueue.new.queue_name.should == 'boss_queue'
       end
     end
 
     context "when @@environment is 'staging'" do
       it "should be 'staging_boss_queue'" do
         BossQueue.environment = 'staging'
-        BossQueue.queue_name.should == 'staging_boss_queue'
+        BossQueue.new.queue_name.should == 'staging_boss_queue'
       end
     end
 
     context "when @@environment is 'staging'" do
       it "should be 'staging_boss_queue'" do
         BossQueue.environment = 'staging'
-        BossQueue.queue_name.should == 'staging_boss_queue'
+        BossQueue.new.queue_name.should == 'staging_boss_queue'
       end
     end
 
     context "when @@environment is nil" do
       it "should raise an exception" do
         lambda {
-          BossQueue.queue_name
+          BossQueue.new.queue_name
         }.should raise_error
+      end
+    end
+
+    context "when a queue option is included in the initializer" do
+      it "should append that to the queue name" do
+        BossQueue.environment = 'production'
+        BossQueue.new(:queue => 'emails').queue_name.should == 'boss_queue_emails'
       end
     end
   end
@@ -129,8 +145,7 @@ describe "BossQueue module" do
 
     context "when a class" do
       it "should initialize a new BossQueue::Job object, save and call enqueue on it" do
-        BossQueue.environment = 'test'
-        BossQueue.failure_action = 'retry'
+        queue = BossQueue.new
         BossQueue::Job.any_instance.should_receive(:kind=).with('TestClass@test_class_method')
         BossQueue::Job.any_instance.should_receive(:queue_name=).with('test_boss_queue')
         BossQueue::Job.any_instance.should_receive(:failure_action=).with('retry')
@@ -140,14 +155,13 @@ describe "BossQueue module" do
         BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
         BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue)
-        BossQueue.enqueue(TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
+        queue.enqueue(TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
     end
 
     context "when a class instance" do
       it "should initialize a new BossQueue::Job object, save and call enqueue on it" do
-        BossQueue.environment = 'test'
-        BossQueue.failure_action = 'retry'
+        queue = BossQueue.new
         BossQueue::Job.any_instance.should_receive(:kind=).with('TestClass#test_instance_method')
         BossQueue::Job.any_instance.should_receive(:queue_name=).with('test_boss_queue')
         BossQueue::Job.any_instance.should_receive(:failure_action=).with('retry')
@@ -157,7 +171,7 @@ describe "BossQueue module" do
         BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
         BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue)
-        BossQueue.enqueue(TestClass.new, :test_instance_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
+        queue.enqueue(TestClass.new, :test_instance_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
     end
 
@@ -171,8 +185,7 @@ describe "BossQueue module" do
 
     context "when a class" do
       it "should initialize a new BossQueue::Job object, save and call enqueue on it" do
-        BossQueue.environment = 'test'
-        BossQueue.failure_action = 'retry'
+        queue = BossQueue.new
         BossQueue::Job.any_instance.should_receive(:kind=).with('TestClass@test_class_method')
         BossQueue::Job.any_instance.should_receive(:queue_name=).with('test_boss_queue')
         BossQueue::Job.any_instance.should_receive(:failure_action=).with('retry')
@@ -182,14 +195,13 @@ describe "BossQueue module" do
         BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
         BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue_with_delay).with(60)
-        BossQueue.enqueue_with_delay(60, TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
+        queue.enqueue_with_delay(60, TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
     end
 
     context "when a class instance" do
       it "should initialize a new BossQueue::Job object, save and call enqueue on it" do
-        BossQueue.environment = 'test'
-        BossQueue.failure_action = 'retry'
+        queue = BossQueue.new
         BossQueue::Job.any_instance.should_receive(:kind=).with('TestClass#test_instance_method')
         BossQueue::Job.any_instance.should_receive(:queue_name=).with('test_boss_queue')
         BossQueue::Job.any_instance.should_receive(:failure_action=).with('retry')
@@ -199,7 +211,7 @@ describe "BossQueue module" do
         BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
         BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue_with_delay).with(60)
-        BossQueue.enqueue_with_delay(60, TestClass.new, :test_instance_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
+        queue.enqueue_with_delay(60, TestClass.new, :test_instance_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
     end
 
@@ -207,59 +219,64 @@ describe "BossQueue module" do
 
   describe "#work" do
     before(:each) do
-      @queue = double('queue')
+      @sqs_queue = double('queue')
       AWS::SQS.stub_chain(:new, :queues, :url_for).and_return('queue_url')
-      AWS::SQS.stub_chain(:new, :queues, :[]).and_return(@queue)
+      AWS::SQS.stub_chain(:new, :queues, :[]).and_return(@sqs_queue)
 
       @sqs_message = double('message')
       @sqs_message.stub(:body).and_return('ijk')
-      @queue.stub(:receive_message)
+      @sqs_queue.stub(:receive_message)
 
       @job = double('job')
       @job.stub(:work)
-      @job.stub(:queue_name=)
+      @job.stub(:sqs_queue=)
       BossQueue::Job.stub_chain(:shard, :find).and_return(@job)
     end
 
-    it "should dequeue from SQS" do
-      @queue.should_receive(:receive_message).and_yield(@sqs_message)
-      BossQueue.work
+    it "should dequeue from SQS using the value of sqs_queue_url" do
+      @sqs_queue.should_receive(:receive_message).and_yield(@sqs_message)
+      BossQueue.new.work
     end
 
     context "when something is dequeued from SQS" do
       before(:each) do
-        @queue.should_receive(:receive_message).and_yield(@sqs_message)
+        @sqs_queue.should_receive(:receive_message).and_yield(@sqs_message)
       end
 
       it "should use the dequeued id to retrieve a BossQueue::Job object" do
         shard = double('shard')
-        BossQueue::Job.should_receive(:shard).with(BossQueue.table_name).and_return(shard)
+        BossQueue::Job.should_receive(:shard).with(BossQueue.new.table_name).and_return(shard)
         shard.should_receive(:find).with('ijk').and_return(@job)
-        BossQueue.work
+        BossQueue.new.work
       end
 
       context "when the dequeued id does not match a BossQueue::Job object" do
         it "should not raise an exception" do
           BossQueue::Job.stub_chain(:shard, :find).and_raise(AWS::Record::RecordNotFound.new)
           lambda {
-            BossQueue.work
+            BossQueue.new.work
           }.should_not raise_error
         end
       end
 
+      it "should set the sqs_queue of the job since we already did the work of retrieving it's url" do
+        @job.should_receive(:sqs_queue=).with(@sqs_queue)
+        BossQueue.new.work
+      end
+
       it "should call work on the BossQueue::Job object" do
         @job.should_receive(:work)
-        BossQueue.work
+        BossQueue.new.work
       end
 
       it "should return true" do
-        BossQueue.work.should be_true
+        BossQueue.new.work.should be_true
       end
     end
 
     context "when nothing is dequeued from SQS" do
       it "should return false" do
-        BossQueue.work.should be_false
+        BossQueue.new.work.should be_false
       end
     end
   end
