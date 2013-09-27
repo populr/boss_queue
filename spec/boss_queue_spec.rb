@@ -238,6 +238,15 @@ describe "BossQueue module" do
         BossQueue.work
       end
 
+      context "when the dequeued id does not match a BossQueue::Job object" do
+        it "should not raise an exception" do
+          BossQueue::Job.stub_chain(:shard, :find).and_raise(AWS::Record::RecordNotFound.new)
+          lambda {
+            BossQueue.work
+          }.should_not raise_error
+        end
+      end
+
       it "should call work on the BossQueue::Job object" do
         @job.should_receive(:work)
         BossQueue.work
