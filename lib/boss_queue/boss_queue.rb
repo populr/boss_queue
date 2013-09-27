@@ -42,7 +42,7 @@ class BossQueue
   def self.work
     self.sqs_queue.receive_message do |job_id|
       # When a block is given, each message is yielded to the block and then deleted as long as the block exits normally - http://docs.aws.amazon.com/AWSRubySDK/latest/frames.html
-      job = BossQueue::Job.shard(table_name).find_by_id(job_id.body)
+      job = BossQueue::Job.shard(table_name).find(job_id.body)
       job.queue_name = self.queue_name
       job.work
     end

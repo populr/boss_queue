@@ -218,7 +218,7 @@ describe "BossQueue module" do
       @job = double('job')
       @job.stub(:work)
       @job.stub(:queue_name=)
-      BossQueue::Job.stub_chain(:shard, :find_by_id).and_return(@job)
+      BossQueue::Job.stub_chain(:shard, :find).and_return(@job)
     end
 
     it "should dequeue from SQS" do
@@ -231,7 +231,7 @@ describe "BossQueue module" do
         @queue.should_receive(:receive_message).and_yield(@sqs_message)
         shard = double('shard')
         BossQueue::Job.should_receive(:shard).with(BossQueue.table_name).and_return(shard)
-        shard.should_receive(:find_by_id).with('ijk').and_return(@job)
+        shard.should_receive(:find).with('ijk').and_return(@job)
         BossQueue.work
       end
 
