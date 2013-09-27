@@ -213,7 +213,7 @@ describe "BossQueue module" do
 
       @sqs_message = double('message')
       @sqs_message.stub(:body).and_return('ijk')
-      @queue.stub(:receive_message).and_yield(@sqs_message)
+      @queue.stub(:receive_message)
 
       @job = double('job')
       @job.stub(:work)
@@ -227,8 +227,11 @@ describe "BossQueue module" do
     end
 
     context "when something is dequeued from SQS" do
-      it "should use the dequeued id to retrieve a BossQueue::Job object" do
+      before(:each) do
         @queue.should_receive(:receive_message).and_yield(@sqs_message)
+      end
+
+      it "should use the dequeued id to retrieve a BossQueue::Job object" do
         shard = double('shard')
         BossQueue::Job.should_receive(:shard).with(BossQueue.table_name).and_return(shard)
         shard.should_receive(:find).with('ijk').and_return(@job)
@@ -238,6 +241,16 @@ describe "BossQueue module" do
       it "should call work on the BossQueue::Job object" do
         @job.should_receive(:work)
         BossQueue.work
+      end
+
+      it "should return true" do
+        BossQueue.work.should be_true
+      end
+    end
+
+    context "when nothing is dequeued from SQS" do
+      it "should return false" do
+        BossQueue.work.should be_false
       end
     end
   end
