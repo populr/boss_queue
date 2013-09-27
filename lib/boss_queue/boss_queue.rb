@@ -34,10 +34,11 @@ class BossQueue
 
   def create_queue
     # small message size because we are only sending id
-    # 5 second delay so that we can use eventually consistent reads in DynamoDB
+    # minimum 1 second delay so that we don't even try to pick it up until it is likely that the
+    # message is ready (or else we waste time just waiting for the saved data to become available)
     AWS::SQS::QueueCollection.new.create(queue_name, :visibility_timeout => 180,
                                                      :maximum_message_size => 1024,
-                                                     :delay_seconds => 5,
+                                                     :delay_seconds => 1,
                                                      :message_retention_period => 1209600)
   end
 
@@ -47,7 +48,7 @@ class BossQueue
       job_dequeued = true
       # When a block is given, each message is yielded to the block and then deleted as long as the block exits normally - http://docs.aws.amazon.com/AWSRubySDK/latest/frames.html
       begin
-        job = BossQueue::Job.shard(table_name).find(job_id.body)
+        job = BossQueue::Job.find_by_id(job_id.body, :shard => table_name, :consistent_read => true)
         job.sqs_queue = sqs_queue
         job.work
       rescue AWS::Record::RecordNotFound

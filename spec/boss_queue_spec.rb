@@ -230,7 +230,7 @@ describe "BossQueue module" do
       @job = double('job')
       @job.stub(:work)
       @job.stub(:sqs_queue=)
-      BossQueue::Job.stub_chain(:shard, :find).and_return(@job)
+      BossQueue::Job.stub(:find_by_id).and_return(@job)
     end
 
     it "should dequeue from SQS using the value of sqs_queue_url" do
@@ -245,14 +245,13 @@ describe "BossQueue module" do
 
       it "should use the dequeued id to retrieve a BossQueue::Job object" do
         shard = double('shard')
-        BossQueue::Job.should_receive(:shard).with(BossQueue.new.table_name).and_return(shard)
-        shard.should_receive(:find).with('ijk').and_return(@job)
+        BossQueue::Job.should_receive(:find_by_id).with('ijk', :shard => BossQueue.new.table_name, :consistent_read => true).and_return(@job)
         BossQueue.new.work
       end
 
       context "when the dequeued id does not match a BossQueue::Job object" do
         it "should not raise an exception" do
-          BossQueue::Job.stub_chain(:shard, :find).and_raise(AWS::Record::RecordNotFound.new)
+          BossQueue::Job.stub(:find_by_id).and_raise(AWS::Record::RecordNotFound.new)
           lambda {
             BossQueue.new.work
           }.should_not raise_error

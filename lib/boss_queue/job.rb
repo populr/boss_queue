@@ -21,6 +21,34 @@ class BossQueue
 
     timestamps
 
+    class << self
+      # We need consistent reads, so override @find_by_id
+      #
+      # @param [String] id The id of the record to load.
+      # @param [Hash] options
+      # @option options [String] :shard Specifies what shard (i.e. table)
+      #   should be searched.
+      # @raise [RecordNotFound] Raises a record not found exception if there
+      #   was no data found for the given id.
+      # @return [Record::HashModel] Returns the record with the given id.
+      def find_by_id id, options = {}
+
+        table = dynamo_db_table(options[:shard])
+
+        data = table.items[id].attributes.to_h(:consistent_read => options[:consistent_read])
+
+        raise RecordNotFound, "no data found for id: #{id}" if data.empty?
+
+        obj = self.new(:shard => table)
+        obj.send(:hydrate, id, data)
+        obj
+
+      end
+      alias_method :[], :find_by_id
+    end
+
+
+
     def enqueue
       sqs_queue.send_message(id.to_s)
     end
