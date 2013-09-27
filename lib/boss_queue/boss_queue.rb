@@ -30,7 +30,6 @@ class BossQueue
   def self.create_table(read_capacity=1, write_capacity=1, options={})
     create_opts = {}
     create_opts[:hash_key] = { :id => :string }
-    create_opts[:range_key] = { :kind => :string }
 
     AWS::DynamoDB.new.tables.create(self.table_name, read_capacity, write_capacity, create_opts)
   end
