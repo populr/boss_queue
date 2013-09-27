@@ -46,10 +46,11 @@ Alternatively, in each of the respective environments, do:
 
     AWS.config(:access_key_id => <access_key_id>,
                :secret_access_key => <secret_access_key>)
+    queue = BossQueue.new
 
     # environment does not need to be set because it is taken from Rails.env
-    BossQueue.create_table
-    BossQueue.create_queue
+    queue.create_table(50, 10)
+    queue.create_queue
 
 
 Or these could be put into a migration.
