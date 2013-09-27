@@ -211,6 +211,24 @@ describe "BossQueue::Job" do
       job.id = 'ijk'
       job.enqueue_with_delay(60)
     end
+
+    it "should limit the delay to 15 minutes" do
+      queue = double('queue')
+      AWS::SQS.stub_chain(:new, :queues, :[]).and_return(queue)
+      queue.should_receive(:send_message).with('ijk', :delay_seconds => 900)
+      job = BossQueue::Job.new
+      job.id = 'ijk'
+      job.enqueue_with_delay(10000)
+    end
+
+    it "should set a negative delay to 0" do
+      queue = double('queue')
+      AWS::SQS.stub_chain(:new, :queues, :[]).and_return(queue)
+      queue.should_receive(:send_message).with('ijk', :delay_seconds => 0)
+      job = BossQueue::Job.new
+      job.id = 'ijk'
+      job.enqueue_with_delay(-60)
+    end
   end
 
   describe "#retry_delay" do

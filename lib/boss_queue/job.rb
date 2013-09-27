@@ -28,7 +28,7 @@ class BossQueue
 
     def enqueue_with_delay(delay)
       queue = AWS::SQS.new.queues[queue_name]
-      queue.send_message(id.to_s, :delay_seconds => delay)
+      queue.send_message(id.to_s, :delay_seconds => [900, [0, delay].max].min)
     end
 
     def work
