@@ -37,18 +37,18 @@ class BossQueue
   end
 
   def work
-    work_done = false
+    job_dequeued = false
     sqs_queue.receive_message do |job_id|
+      job_dequeued = true
       # When a block is given, each message is yielded to the block and then deleted as long as the block exits normally - http://docs.aws.amazon.com/AWSRubySDK/latest/frames.html
       begin
         job = BossQueue::Job.shard(table_name).find(job_id.body)
         job.sqs_queue = sqs_queue
         job.work
-        work_done = true
       rescue AWS::Record::RecordNotFound
       end
     end
-    work_done
+    job_dequeued
   end
 
   def enqueue(class_or_instance, method_name, *args)

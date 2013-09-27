@@ -71,6 +71,7 @@ Usage
     queue.enqueue(MyClass, :method_to_execute)
     queue.enqueue_with_delay(60, MyClass, :method_to_execute, arg1, arg2)
 
+    # work returns true if a job was pulled from the queue, false otherwise
     queue.work
 
     # failures are left in the DynamoDB table with the failed boolean set to true
