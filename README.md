@@ -82,7 +82,7 @@ Usage
 
     # failures are left in the DynamoDB table with the failed boolean set to true
 
-BossQueue does not at present have a daemon component such as Sidekiq or Resque.
+BossQueue does not at present have a daemon component like Sidekiq and Resque do.
 
 
 Future Work
