@@ -5,16 +5,16 @@ class BossQueue
   class Job < AWS::Record::HashModel
     attr_accessor :queue_name
 
-    string_attr :kind # an index based model_class_name, job_method
     boolean_attr :failed
 
     string_attr :model_class_name
     string_attr :model_id
-    string_attr :job_method
-    string_attr :job_arguments
+    string_attr :callback
+    string_attr :args
 
     integer_attr :failed_attempts
     string_attr :failure_action
+    string_attr :failure_callback
     string_attr :exception_name
     string_attr :exception_message
     string_attr :stacktrace
@@ -59,14 +59,7 @@ class BossQueue
 
     def work
       begin
-        klass = constantize(model_class_name)
-        if model_id
-          target = klass.find(model_id)
-        else
-          target = klass
-        end
-        args = JSON.parse(job_arguments)
-        target.send(job_method, *args)
+        target.send(callback, *arguments)
         destroy
       rescue StandardError => err
         fail(err)
@@ -82,11 +75,17 @@ class BossQueue
 
       if failure_action == 'retry' && retry_delay
         enqueue_with_delay(retry_delay)
+        self.save!
+
+      elsif failure_action == 'callback' &&
+            failure_callback &&
+            target.send(failure_callback, *arguments)
+        destroy
+
       else
         self.failed = true
+        self.save!
       end
-
-      self.save!
     end
 
     def retry_delay
@@ -99,6 +98,19 @@ class BossQueue
     end
 
     private
+
+    def arguments
+      JSON.parse(args)
+    end
+
+    def target
+      klass = constantize(model_class_name)
+      if model_id
+        klass.find(model_id)
+      else
+        klass
+      end
+    end
 
     def sqs_queue
       @sqs_queue ||= AWS::SQS.new.queues[AWS::SQS.new.queues.url_for(queue_name)]

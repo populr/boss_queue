@@ -5,6 +5,7 @@ class BossQueue
 
   def initialize(options={})
     @failure_action = options[:failure_action] if options[:failure_action]
+    @failure_callback = options[:failure_callback] if options[:failure_callback]
     @queue_postfix = options[:queue] ? '_' + options[:queue] : ''
   end
 
@@ -14,6 +15,10 @@ class BossQueue
 
   def failure_action
     @failure_action ||= 'retry'
+  end
+
+  def failure_callback
+    @failure_callback
   end
 
   def table_name
@@ -57,33 +62,32 @@ class BossQueue
     job_dequeued
   end
 
-  def enqueue(class_or_instance, method_name, *args)
-    job = create_job(class_or_instance, method_name, *args)
+  def enqueue(class_or_instance, callback_method, *args)
+    job = create_job(class_or_instance, callback_method, *args)
     job.enqueue
   end
 
-  def enqueue_with_delay(delay, class_or_instance, method_name, *args)
-    job = create_job(class_or_instance, method_name, *args)
+  def enqueue_with_delay(delay, class_or_instance, callback_method, *args)
+    job = create_job(class_or_instance, callback_method, *args)
     job.enqueue_with_delay(delay)
   end
 
-  def create_job(class_or_instance, method_name, *args) # :nodoc:
+  def create_job(class_or_instance, callback_method, *args) # :nodoc:
     job = BossQueue::Job.shard(table_name).new
     if class_or_instance.is_a?(Class)
       class_name = class_or_instance.to_s
       instance_id = nil
-      job.kind = "#{class_name}@#{method_name}"
     else
       class_name = class_or_instance.class.to_s
       instance_id = class_or_instance.id
-      job.kind = "#{class_name}##{method_name}"
     end
     job.queue_name = queue_name
     job.failure_action = failure_action
+    job.failure_callback = failure_callback.to_s if failure_action == 'callback' && failure_callback
     job.model_class_name = class_name
     job.model_id = instance_id unless instance_id.nil?
-    job.job_method = method_name.to_s
-    job.job_arguments = JSON.generate(args)
+    job.callback = callback_method.to_s
+    job.args = JSON.generate(args)
     job.save!
     job
   end

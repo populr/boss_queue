@@ -96,21 +96,21 @@ describe "BossQueue::Job" do
   end
 
 
-  it "should respond to job_method" do
-    BossQueue::Job.new.should respond_to(:job_method)
+  it "should respond to callback" do
+    BossQueue::Job.new.should respond_to(:callback)
   end
 
-  it "should respond to job_method=" do
-    BossQueue::Job.new.should respond_to(:job_method=)
+  it "should respond to callback=" do
+    BossQueue::Job.new.should respond_to(:callback=)
   end
 
 
-  it "should respond to job_arguments" do
-    BossQueue::Job.new.should respond_to(:job_arguments)
+  it "should respond to args" do
+    BossQueue::Job.new.should respond_to(:args)
   end
 
-  it "should respond to job_arguments=" do
-    BossQueue::Job.new.should respond_to(:job_arguments=)
+  it "should respond to args=" do
+    BossQueue::Job.new.should respond_to(:args=)
   end
 
 
@@ -120,10 +120,10 @@ describe "BossQueue::Job" do
       @job.stub(:destroy)
       @job.model_class_name = 'TestClass'
       @job.model_id = 'xyz'
-      @job.job_method = 'test_instance_method'
+      @job.callback = 'test_instance_method'
       @arguments = ['a', 'b', { 'c' => 2, 'd' => 1 }]
       @argument_json = JSON.generate(@arguments)
-      @job.job_arguments = @argument_json
+      @job.args = @argument_json
       @instance_to_work_on = double('instance_to_work_on')
       @instance_to_work_on.stub(:test_instance_method)
       TestClass.stub(:find).and_return(@instance_to_work_on)
@@ -147,10 +147,10 @@ describe "BossQueue::Job" do
         @job = BossQueue::Job.new
         @job.stub(:destroy)
         @job.model_class_name = 'TestClass'
-        @job.job_method = 'test_class_method'
+        @job.callback = 'test_class_method'
         @arguments = ['a', 'b', { 'c' => 2, 'd' => 1 }]
         @argument_json = JSON.generate(@arguments)
-        @job.job_arguments = @argument_json
+        @job.args = @argument_json
       end
 
       it "should pass the job arguments to the job method on the class" do
@@ -314,6 +314,47 @@ describe "BossQueue::Job" do
     it "should call save!" do
       @job.should_receive(:save!)
       @job.fail(@err)
+    end
+
+    context "when failure_action is 'callback'" do
+      before(:each) do
+        @job.failure_action = 'callback'
+        @job.failure_callback = 'failure'
+
+        @job.stub(:destroy)
+        @job.model_class_name = 'TestClass'
+        @job.model_id = 'xyz'
+        @job.callback = 'test_instance_method'
+        @arguments = ['a', 'b', { 'c' => 2, 'd' => 1 }]
+        @argument_json = JSON.generate(@arguments)
+        @job.args = @argument_json
+        @instance_to_work_on = double('instance_to_work_on')
+        @instance_to_work_on.stub(:test_instance_method)
+        @instance_to_work_on.stub(:failure).and_return(false)
+        TestClass.stub(:find).and_return(@instance_to_work_on)
+      end
+
+      it "should call the failure_callback method with the arguments" do
+        @instance_to_work_on.should_receive(:failure).with('a', 'b', { 'c' => 2, 'd' => 1 })
+        @job.fail(@err)
+      end
+
+      context "when the failure_callback method returns truthy" do
+        it "should delete the job" do
+          @job.should_receive(:destroy)
+          @instance_to_work_on.stub(:failure).and_return(true)
+          @job.fail(@err)
+        end
+      end
+
+      context "when the failure_callback method returns falsey" do
+        it "should mark the job as failed" do
+          @job.should_not_receive(:destroy)
+          @instance_to_work_on.stub(:failure).and_return(false)
+          @job.fail(@err)
+          @job.failed.should be_true
+        end
+      end
     end
 
     context "when failure_action is 'retry'" do

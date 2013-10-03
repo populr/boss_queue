@@ -4,15 +4,16 @@ describe "BossQueue module" do
   before(:each) do
     BossQueue.environment = 'test'
 
-    BossQueue::Job.any_instance.stub(:kind=)
     BossQueue::Job.any_instance.stub(:queue_name=)
     BossQueue::Job.any_instance.stub(:failure_action=)
+    BossQueue::Job.any_instance.stub(:failure_callback=)
     BossQueue::Job.any_instance.stub(:model_class_name=)
     BossQueue::Job.any_instance.stub(:model_id=)
-    BossQueue::Job.any_instance.stub(:job_method=)
-    BossQueue::Job.any_instance.stub(:job_arguments=)
+    BossQueue::Job.any_instance.stub(:callback=)
+    BossQueue::Job.any_instance.stub(:args=)
     BossQueue::Job.any_instance.stub(:save!)
     BossQueue::Job.any_instance.stub(:enqueue)
+    BossQueue::Job.any_instance.stub(:enqueue_with_delay)
   end
 
   it "should respond to environment" do
@@ -146,13 +147,12 @@ describe "BossQueue module" do
     context "when a class" do
       it "should initialize a new BossQueue::Job object, save and call enqueue on it" do
         queue = BossQueue.new
-        BossQueue::Job.any_instance.should_receive(:kind=).with('TestClass@test_class_method')
         BossQueue::Job.any_instance.should_receive(:queue_name=).with('test_boss_queue')
         BossQueue::Job.any_instance.should_receive(:failure_action=).with('retry')
         BossQueue::Job.any_instance.should_receive(:model_class_name=).with('TestClass')
         BossQueue::Job.any_instance.should_not_receive(:model_id=)
-        BossQueue::Job.any_instance.should_receive(:job_method=).with('test_class_method')
-        BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
+        BossQueue::Job.any_instance.should_receive(:callback=).with('test_class_method')
+        BossQueue::Job.any_instance.should_receive(:args=).with(@argument_json)
         BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue)
         queue.enqueue(TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
@@ -162,16 +162,23 @@ describe "BossQueue module" do
     context "when a class instance" do
       it "should initialize a new BossQueue::Job object, save and call enqueue on it" do
         queue = BossQueue.new
-        BossQueue::Job.any_instance.should_receive(:kind=).with('TestClass#test_instance_method')
         BossQueue::Job.any_instance.should_receive(:queue_name=).with('test_boss_queue')
         BossQueue::Job.any_instance.should_receive(:failure_action=).with('retry')
         BossQueue::Job.any_instance.should_receive(:model_class_name=).with('TestClass')
         BossQueue::Job.any_instance.should_receive(:model_id=).with('xyz')
-        BossQueue::Job.any_instance.should_receive(:job_method=).with('test_instance_method')
-        BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
+        BossQueue::Job.any_instance.should_receive(:callback=).with('test_instance_method')
+        BossQueue::Job.any_instance.should_receive(:args=).with(@argument_json)
         BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue)
         queue.enqueue(TestClass.new, :test_instance_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
+      end
+    end
+
+    context "when failure_action is 'callback'" do
+      it "should set the job failure_callback to the failure_callback option" do
+        queue = BossQueue.new(:failure_action => 'callback', :failure_callback => :call_if_failed)
+        BossQueue::Job.any_instance.should_receive(:failure_callback=).with('call_if_failed')
+        queue.enqueue(TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
     end
 
@@ -186,13 +193,12 @@ describe "BossQueue module" do
     context "when a class" do
       it "should initialize a new BossQueue::Job object, save and call enqueue on it" do
         queue = BossQueue.new
-        BossQueue::Job.any_instance.should_receive(:kind=).with('TestClass@test_class_method')
         BossQueue::Job.any_instance.should_receive(:queue_name=).with('test_boss_queue')
         BossQueue::Job.any_instance.should_receive(:failure_action=).with('retry')
         BossQueue::Job.any_instance.should_receive(:model_class_name=).with('TestClass')
         BossQueue::Job.any_instance.should_not_receive(:model_id=)
-        BossQueue::Job.any_instance.should_receive(:job_method=).with('test_class_method')
-        BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
+        BossQueue::Job.any_instance.should_receive(:callback=).with('test_class_method')
+        BossQueue::Job.any_instance.should_receive(:args=).with(@argument_json)
         BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue_with_delay).with(60)
         queue.enqueue_with_delay(60, TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
@@ -202,16 +208,23 @@ describe "BossQueue module" do
     context "when a class instance" do
       it "should initialize a new BossQueue::Job object, save and call enqueue on it" do
         queue = BossQueue.new
-        BossQueue::Job.any_instance.should_receive(:kind=).with('TestClass#test_instance_method')
         BossQueue::Job.any_instance.should_receive(:queue_name=).with('test_boss_queue')
         BossQueue::Job.any_instance.should_receive(:failure_action=).with('retry')
         BossQueue::Job.any_instance.should_receive(:model_class_name=).with('TestClass')
         BossQueue::Job.any_instance.should_receive(:model_id=).with('xyz')
-        BossQueue::Job.any_instance.should_receive(:job_method=).with('test_instance_method')
-        BossQueue::Job.any_instance.should_receive(:job_arguments=).with(@argument_json)
+        BossQueue::Job.any_instance.should_receive(:callback=).with('test_instance_method')
+        BossQueue::Job.any_instance.should_receive(:args=).with(@argument_json)
         BossQueue::Job.any_instance.should_receive(:save!)
         BossQueue::Job.any_instance.should_receive(:enqueue_with_delay).with(60)
         queue.enqueue_with_delay(60, TestClass.new, :test_instance_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
+      end
+    end
+
+    context "when failure_action is 'callback'" do
+      it "should set the job failure_callback to the failure_callback option" do
+        queue = BossQueue.new(:failure_action => 'callback', :failure_callback => :call_if_failed)
+        BossQueue::Job.any_instance.should_receive(:failure_callback=).with('call_if_failed')
+        queue.enqueue_with_delay(60, TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
     end
 
