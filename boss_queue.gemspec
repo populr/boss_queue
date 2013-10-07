@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = "boss_queue"
-  s.version = "0.3.0"
+  s.version = "0.3.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Daniel Nelson"]
-  s.date = "2013-10-03"
+  s.date = "2013-10-07"
   s.description = "A fault tolerant job queue built around Amazon SQS & DynamoDB"
   s.email = "daniel@populr.me"
   s.extra_rdoc_files = [
