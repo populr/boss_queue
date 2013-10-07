@@ -355,6 +355,15 @@ describe "BossQueue::Job" do
           @job.failed.should be_true
         end
       end
+
+      context "when finding the target to call back raises an exception" do
+        it "should not raise an exception" do
+          @job.stub(:target).and_raise('object not found')
+          lambda {
+            @job.fail(@err)
+          }.should_not raise_error
+        end
+      end
     end
 
     context "when failure_action is 'retry'" do

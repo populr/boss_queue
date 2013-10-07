@@ -78,9 +78,15 @@ class BossQueue
         self.save!
 
       elsif failure_action == 'callback' &&
-            failure_callback &&
-            target.send(failure_callback, *arguments)
-        destroy
+            failure_callback
+
+        callback_called = target.send(failure_callback, *arguments) rescue nil
+        if callback_called
+          destroy
+        else
+          self.failed = true
+          self.save!
+        end
 
       else
         self.failed = true
