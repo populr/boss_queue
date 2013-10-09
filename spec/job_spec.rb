@@ -334,8 +334,8 @@ describe "BossQueue::Job" do
         TestClass.stub(:find).and_return(@instance_to_work_on)
       end
 
-      it "should call the failure_callback method with the arguments" do
-        @instance_to_work_on.should_receive(:failure).with('a', 'b', { 'c' => 2, 'd' => 1 })
+      it "should call the failure_callback method with the exception and the callback arguments" do
+        @instance_to_work_on.should_receive(:failure).with(instance_of(StandardError), 'a', 'b', { 'c' => 2, 'd' => 1 })
         @job.fail(@err)
       end
 
