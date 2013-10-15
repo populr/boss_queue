@@ -6,6 +6,7 @@ class BossQueue
   def initialize(options={})
     @failure_action = options[:failure_action] if options[:failure_action]
     @failure_callback = options[:failure_callback] if options[:failure_callback]
+    @delete_if_target_missing = options[:delete_if_target_missing] if options[:delete_if_target_missing]
     @queue_postfix = options[:queue] ? '_' + options[:queue] : ''
   end
 
@@ -19,6 +20,10 @@ class BossQueue
 
   def failure_callback
     @failure_callback
+  end
+
+  def delete_if_target_missing
+    @delete_if_target_missing
   end
 
   def table_name
@@ -84,6 +89,7 @@ class BossQueue
     job.queue_name = queue_name
     job.failure_action = failure_action
     job.failure_callback = failure_callback.to_s if failure_action == 'callback' && failure_callback
+    job.delete_if_target_missing = delete_if_target_missing if delete_if_target_missing
     job.model_class_name = class_name
     job.model_id = instance_id unless instance_id.nil?
     job.callback = callback_method.to_s

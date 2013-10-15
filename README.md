@@ -67,9 +67,15 @@ Usage
     myobject = MyClass.new
     # default failure action is 'retry' which retries up to four times
     queue = BossQueue.new(:failure_action => 'none', :queue => 'emails')
+
     # or we can set up a callback method to be called on the enqueued class / object
     # when there is a failure
     queue = BossQueue.new(:failure_action => 'callback', :failure_callback => :method_to_execute_on_failure, :queue => 'emails')
+
+    # by default, BossQueue will record a failed job if the target cannot be found
+    # when the background job runs; the job can be deleted instead by including a
+    # :delete_if_target_missing => true option
+    queue = BossQueue.new(:delete_if_target_missing => true, :queue => 'emails')
 
     # can enqueue instance methods (assumes that objects have an id and a #find(id) method)
     queue.enqueue(myobject, :method_to_execute, arg1, arg2)

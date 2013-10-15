@@ -7,6 +7,7 @@ describe "BossQueue module" do
     BossQueue::Job.any_instance.stub(:queue_name=)
     BossQueue::Job.any_instance.stub(:failure_action=)
     BossQueue::Job.any_instance.stub(:failure_callback=)
+    BossQueue::Job.any_instance.stub(:delete_if_target_missing=)
     BossQueue::Job.any_instance.stub(:model_class_name=)
     BossQueue::Job.any_instance.stub(:model_id=)
     BossQueue::Job.any_instance.stub(:callback=)
@@ -182,6 +183,14 @@ describe "BossQueue module" do
       end
     end
 
+    context "when delete_if_target_missing option is true" do
+      it "should set delete_if_target_missing on the job" do
+        queue = BossQueue.new(:delete_if_target_missing => true)
+        BossQueue::Job.any_instance.should_receive(:delete_if_target_missing=).with(true)
+        queue.enqueue(TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
+      end
+    end
+
   end
 
   describe "#enqueue_with_delay" do
@@ -224,6 +233,14 @@ describe "BossQueue module" do
       it "should set the job failure_callback to the failure_callback option" do
         queue = BossQueue.new(:failure_action => 'callback', :failure_callback => :call_if_failed)
         BossQueue::Job.any_instance.should_receive(:failure_callback=).with('call_if_failed')
+        queue.enqueue_with_delay(60, TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
+      end
+    end
+
+    context "when delete_if_target_missing option is true" do
+      it "should set delete_if_target_missing on the job" do
+        queue = BossQueue.new(:delete_if_target_missing => true)
+        BossQueue::Job.any_instance.should_receive(:delete_if_target_missing=).with(true)
         queue.enqueue_with_delay(60, TestClass, :test_class_method, 'a', 'b', { 'c' => 2, 'd' => 1 })
       end
     end
