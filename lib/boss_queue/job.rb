@@ -6,6 +6,8 @@ class BossQueue
     attr_accessor :queue_name
 
     boolean_attr :failed
+    boolean_attr :target_missing
+    boolean_attr :delete_if_target_missing
 
     string_attr :model_class_name
     string_attr :model_id
@@ -73,14 +75,26 @@ class BossQueue
       self.exception_message = err.message
       self.stacktrace = err.backtrace[0, 7].join("\n")
 
-      if failure_action == 'retry' && retry_delay
+      failed_target = target rescue nil
+
+      if failed_target.nil?
+        if delete_if_target_missing?
+          destroy
+        else
+          self.failed = true
+          self.target_missing = true
+          self.save!
+        end
+
+      elsif failure_action == 'retry' && retry_delay
         enqueue_with_delay(retry_delay)
         self.save!
 
       elsif failure_action == 'callback' &&
             failure_callback
 
-        delete_me = target.send(failure_callback, err, *arguments) rescue nil
+
+        delete_me = failed_target.send(failure_callback, err, *arguments)
         if delete_me
           destroy
         else
@@ -110,6 +124,10 @@ class BossQueue
     end
 
     def target
+      @target ||= _target
+    end
+
+    def _target
       klass = constantize(model_class_name)
       if model_id
         klass.find(model_id)

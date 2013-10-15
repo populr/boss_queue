@@ -11,17 +11,48 @@ describe "BossQueue::Job" do
   end
 
 
-  it "should respond to failed" do
-    BossQueue::Job.new.should respond_to(:failed)
+
+  it "should respond to target_missing?" do
+    BossQueue::Job.new.should respond_to(:target_missing?)
+  end
+
+  it "should respond to target_missing=" do
+    BossQueue::Job.new.should respond_to(:target_missing=)
+  end
+
+  describe "#target_missing?" do
+    it "should default to false" do
+      BossQueue::Job.new.target_missing?.should be_false
+    end
+  end
+
+
+  it "should respond to delete_if_target_missing?" do
+    BossQueue::Job.new.should respond_to(:delete_if_target_missing?)
+  end
+
+  it "should respond to delete_if_target_missing=" do
+    BossQueue::Job.new.should respond_to(:delete_if_target_missing=)
+  end
+
+  describe "#delete_if_target_missing?" do
+    it "should default to false" do
+      BossQueue::Job.new.delete_if_target_missing?.should be_false
+    end
+  end
+
+
+  it "should respond to failed?" do
+    BossQueue::Job.new.should respond_to(:failed?)
   end
 
   it "should respond to failed=" do
     BossQueue::Job.new.should respond_to(:failed=)
   end
 
-  describe "#failed" do
+  describe "#failed?" do
     it "should default to false" do
-      BossQueue::Job.new.failed.should be_false
+      BossQueue::Job.new.failed?.should be_false
     end
   end
 
@@ -284,10 +315,24 @@ describe "BossQueue::Job" do
 
   describe "#fail" do
     before(:each) do
+      @instance_to_work_on = double('instance_to_work_on')
+      @instance_to_work_on.stub(:test_instance_method)
+      @instance_to_work_on.stub(:failure).and_return(false)
+      TestClass.stub(:find).and_return(@instance_to_work_on)
+
       @job = BossQueue::Job.new
       @job.stub(:retry_delay).and_return(nil)
       @job.stub(:save!)
       @job.stub(:enqueue_with_delay)
+
+      @job.stub(:destroy)
+      @job.model_class_name = 'TestClass'
+      @job.model_id = 'xyz'
+      @job.callback = 'test_instance_method'
+      @arguments = ['a', 'b', { 'c' => 2, 'd' => 1 }]
+      @argument_json = JSON.generate(@arguments)
+      @job.args = @argument_json
+
       @err
       begin
         raise StandardError.new('hello world')
@@ -316,22 +361,50 @@ describe "BossQueue::Job" do
       @job.fail(@err)
     end
 
+
+
+
+
+    context "when delete_if_target_missing is true and the target cannot be found" do
+      it "should destroy the record" do
+        @job.failure_action = 'callback'
+        @job.failure_callback = 'failure'
+        @job.delete_if_target_missing = true
+        TestClass.stub(:find).and_raise('not found')
+
+        @job.should_receive(:destroy)
+        @job.fail(@err)
+      end
+    end
+
+
+
+
+    context "when delete_if_target_missing is false and the target cannot be found" do
+      before(:each) do
+        @job.failure_action = 'callback'
+        @job.failure_callback = 'failure'
+        TestClass.stub(:find).and_raise('not found')
+      end
+
+      it "should set target_missing on the job" do
+        @job.fail(@err)
+        @job.target_missing.should be_true
+      end
+
+      it "should not destroy the record" do
+        @job.should_not_receive(:destroy)
+        @job.fail(@err)
+      end
+    end
+
+
+
+
     context "when failure_action is 'callback'" do
       before(:each) do
         @job.failure_action = 'callback'
         @job.failure_callback = 'failure'
-
-        @job.stub(:destroy)
-        @job.model_class_name = 'TestClass'
-        @job.model_id = 'xyz'
-        @job.callback = 'test_instance_method'
-        @arguments = ['a', 'b', { 'c' => 2, 'd' => 1 }]
-        @argument_json = JSON.generate(@arguments)
-        @job.args = @argument_json
-        @instance_to_work_on = double('instance_to_work_on')
-        @instance_to_work_on.stub(:test_instance_method)
-        @instance_to_work_on.stub(:failure).and_return(false)
-        TestClass.stub(:find).and_return(@instance_to_work_on)
       end
 
       it "should call the failure_callback method with the exception and the callback arguments" do
