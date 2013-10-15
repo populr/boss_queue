@@ -80,8 +80,8 @@ class BossQueue
       elsif failure_action == 'callback' &&
             failure_callback
 
-        callback_called = target.send(failure_callback, err, *arguments) rescue nil
-        if callback_called
+        delete_me = target.send(failure_callback, err, *arguments) rescue nil
+        if delete_me
           destroy
         else
           self.failed = true
