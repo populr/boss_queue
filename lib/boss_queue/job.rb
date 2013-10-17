@@ -39,7 +39,7 @@ class BossQueue
 
         data = table.items[id].attributes.to_h(:consistent_read => options[:consistent_read])
 
-        raise RecordNotFound, "no data found for id: #{id}" if data.empty?
+        raise AWS::Record::RecordNotFound, "no data found for id: #{id}" if data.empty?
 
         obj = self.new(:shard => table)
         obj.send(:hydrate, id, data)
