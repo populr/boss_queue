@@ -73,7 +73,7 @@ class BossQueue
       self.failed_attempts += 1
       self.exception_name = err.class.to_s
       self.exception_message = err.message
-      self.stacktrace = err.backtrace[0, 7].join("\n")
+      self.stacktrace = err.backtrace[0, 15].join("\n")
 
       failed_target = target rescue nil
 
