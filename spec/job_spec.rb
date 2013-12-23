@@ -353,7 +353,7 @@ describe "BossQueue::Job" do
       @job.fail(@err)
       @job.exception_name.should == @err.class.to_s
       @job.exception_message.should == @err.message
-      @job.stacktrace.should == @err.backtrace[0, 7].join("\n")
+      @job.stacktrace.should == @err.backtrace[0, 15].join("\n")
     end
 
     it "should call save!" do
