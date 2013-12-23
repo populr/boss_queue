@@ -99,7 +99,16 @@ class BossQueue
   end
 
   def sqs_queue # :nodoc:
-    @sqs_queue ||= AWS::SQS.new.queues[AWS::SQS.new.queues.url_for(queue_name)]
+    @sqs_queue ||= BossQueue.sqs_queues[BossQueue.sqs_queue_url(queue_name)]
+  end
+
+  def self.sqs_queues # :nodoc:
+    @sqs_queues ||= AWS::SQS.new.queues
+  end
+
+  def self.sqs_queue_url(name) # :nodoc:
+    @url_mapping ||= {}
+    @url_mapping[name] ||= BossQueue.sqs_queues.url_for(name)
   end
 
   def self.environment # :nodoc:

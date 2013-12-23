@@ -137,7 +137,7 @@ class BossQueue
     end
 
     def sqs_queue
-      @sqs_queue ||= AWS::SQS.new.queues[AWS::SQS.new.queues.url_for(queue_name)]
+      @sqs_queue ||= BossQueue.sqs_queues[BossQueue.sqs_queue_url(queue_name)]
     end
 
     # from ActiveSupport source: http://api.rubyonrails.org/classes/ActiveSupport/Inflector.html#method-i-constantize
